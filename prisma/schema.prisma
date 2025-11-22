@@ -1,15 +1,109 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// =======================
+// Prisma Client Generator
+// =======================
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
+// =======================
+// Database Connection
+// =======================
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// =======================
+//       MODELS
+// =======================
+
+// ---------- USERS ----------
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  name      String?
+  role      UserRole  @default(CLIENT)
+
+  orders    Order[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// ---------- ROLES ENUM ----------
+enum UserRole {
+  ADMIN
+  CLIENT
+  COURIER
+}
+
+// ---------- RESTAURANTS ----------
+model Restaurant {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  address     String
+  image       String?
+
+  dishes      Dish[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ---------- DISHES ----------
+model Dish {
+  id            Int        @id @default(autoincrement())
+  name          String
+  description   String?
+  price         Decimal     @db.Decimal(10,2)
+  image         String?
+
+  restaurantId  Int
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  orderItems    OrderItem[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ---------- ORDERS ----------
+model Order {
+  id        Int          @id @default(autoincrement())
+  userId    Int
+  user      User         @relation(fields: [userId], references: [id])
+  
+  status    OrderStatus  @default(PENDING)
+  total     Decimal      @db.Decimal(10,2)
+  
+  items     OrderItem[]
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+// ---------- ORDER ITEMS ----------
+model OrderItem {
+  id        Int       @id @default(autoincrement())
+  orderId   Int
+  dishId    Int
+
+  quantity  Int       @default(1)
+
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  dish      Dish      @relation(fields: [dishId], references: [id])
+
+  createdAt DateTime  @default(now())
+}
+
+// ---------- ORDER STATUS ENUM ----------
+enum OrderStatus {
+  PENDING     // створено, очікує підтвердження
+  ACCEPTED    // ресторан прийняв
+  COOKING     // готується
+  DELIVERING  // курʼєр везе
+  COMPLETED   // виконано
+  CANCELED    // відхилено
 }
